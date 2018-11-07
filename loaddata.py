@@ -1,32 +1,43 @@
-import pandas as pd
+#import pandas as pd
 import numpy as np
 
 from sklearn.model_selection import train_test_split
 from scipy.sparse import csc_matrix
 from scipy.sparse import csr_matrix
 
-
+def load_data(path):
+    data = []
+    users = set()
+    items = set()
+    with open(path,'r') as f:
+        for line in f:
+            cols = line.strip().split()
+            u = int(cols[0])
+            i = int(cols[1])
+            if u > 500 or i > 1000:
+                continue
+            users.add(u)
+            items.add(i)
+            data.append((u,i))
+    return data, len(users), len(items)
 
 def load_ranking_data(path="data/filmtrust.dat", test_size=0.2, header=['user_id', 'item_id', 'rating'], sep="\t"):
-    df = pd.read_csv(path, sep=sep, names=header, engine='python')
+    data, n_users, n_items = load_data(path)
 
-    print(df.user_id.unique().shape[0])
-    print(df.item_id.unique().shape[0])
-    n_users = df.user_id.unique().shape[0]  # 943  #6040df.user_id.unique().shape[0]
-    n_items = df.item_id.unique().shape[0]  # 1682 #3706#df.item_id.unique().shape[0]
+    print(n_users)
+    print(n_items)
 
-    train_data, test_data = train_test_split(df, test_size=test_size)
-    train_data = pd.DataFrame(train_data)
-    test_data = pd.DataFrame(test_data)
+    train_data, test_data = train_test_split(data, test_size=test_size)
 
     train_row = []
     train_col = []
     train_rating = []
 
+    print("gen train")
     train_dict = {}
-    for line in train_data.itertuples():
-        u = line[1] - 1
-        i = line[2] - 1
+    for u,i in train_data:
+        u = u - 1
+        i = i - 1
         train_dict[(u, i)] = 1
     print(len(train_dict))
     count = 0
@@ -43,6 +54,7 @@ def load_ranking_data(path="data/filmtrust.dat", test_size=0.2, header=['user_id
     train_matrix = csr_matrix((train_rating, (train_row, train_col)), shape=(n_users, n_items))
     all_items = set(np.arange(n_items))
 
+    print("gen test")
     neg_user_item_matrix = {}
     train_user_item_matrix = []
     for u in range(n_users):
@@ -56,10 +68,12 @@ def load_ranking_data(path="data/filmtrust.dat", test_size=0.2, header=['user_id
     test_col = []
     test_rating = []
     unique_users = []
-    for line in test_data.itertuples():
-        test_row.append(line[1] - 1)
-        unique_users.append(line[1] - 1)
-        test_col.append(line[2] - 1)
+    for u,i in test_data:
+        u = u - 1
+        i = i - 1
+        test_row.append(u)
+        unique_users.append(u)
+        test_col.append(i)
         test_rating.append(1)
     test_matrix = csr_matrix((test_rating, (test_row, test_col)), shape=(n_users, n_items))
     test_user_item_matrix = {}
